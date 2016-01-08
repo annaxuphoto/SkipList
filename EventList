@@ -1,0 +1,210 @@
+//
+// EVENTLIST.JAVA
+//import java.awt.Event;
+// Skeleton code for your EventList collection type.
+//
+import java.util.*;
+
+class EventList {
+
+	Random randseq;
+	Event head;
+	Event tail;
+
+	////////////////////////////////////////////////////////////////////
+	// Here's a suitable geometric random number generator for choosing
+	// pillar heights.  We use Java's ability to generate random booleans
+	// to simulate coin flips.
+	////////////////////////////////////////////////////////////////////
+
+	int randomHeight()
+	{
+		int v = 1;
+		while (randseq.nextBoolean()) { v++; }
+		return v;
+	}
+
+
+	//
+	// Constructor
+	//
+	public EventList()
+	{
+		randseq = new Random(58243); // You may seed the PRNG however you like.
+		head = new Event(Integer.MIN_VALUE, "");
+		head.next = new Event[1];
+		head.next[0] = tail;
+		tail = new Event(Integer.MAX_VALUE, "");
+		tail.next = new Event[1];
+		tail.next[0] = null;
+	}
+
+
+	//
+	// Add an Event to the list.
+	//
+	public void insert(Event e)
+	{
+		int t = randomHeight();
+		while(t >= head.next.length) {
+			doubleHeight(head);
+			doubleHeight(tail);
+		}
+		e.next = new Event[t]; //allocate a pillar of height t for e
+		int l = head.next.length-1;
+		Event x = head;
+		while(l >= 0) {
+			Event y = x.next[l];
+			if(y != null && y.year < e.year)
+				x = y; //keep skipping
+			else {
+				if(l < t) {
+					x.next[l] = e; //links e into list at level l between x and y
+					e.next[l] = y;
+				}
+				l--;
+			}
+		}
+	}
+
+	public void doubleHeight(Event e) {
+		Event[] temp = new Event[e.next.length];
+		for(int i = 0; i<e.next.length; i++) { //temporary array storing old e values
+			temp[i] = e.next[i];
+		}
+		e.next = new Event[2 * temp.length];
+		for(int j = 0; j<temp.length; j++) { //fill new array with old values
+			e.next[j] = temp[j];
+		}
+		for(int k = temp.length; k < e.next.length; k++) { //fill rest of new array with last value
+			e.next[k] = e.next[temp.length-1];
+		}
+	}
+
+
+	//
+	// Remove all Events in the list with the specified year.
+	//
+	public void remove(int year)
+	{
+		Event x = head;
+		int l = x.next.length - 1;
+		while(l >=0) {
+			if(x.next[l] == null) {
+				l--;
+			}
+			else if(x.next[l].year == year) {
+				x.next[l] = x.next[l].next[l];
+//				System.out.println("removed");
+			}
+			else if(x.next[l].year > year) {
+				l--;
+			}
+			else if(x.next[l].year < year) {
+				x = x.next[l];
+			}
+		}
+
+	}
+
+	//
+	// Find all events with greatest year <= input year
+	//
+	public Event [] findMostRecent(int year)
+	{
+		ArrayList<Event> recent = new ArrayList<Event>();
+		int l = head.next.length - 1;
+		Event x = head;
+		Event y = head.next[0];
+		Event temp = y;
+		int diff = Integer.MAX_VALUE;
+		while(l >= 0) {
+			y = x.next[l];
+			if(y != null && y.year == year) {
+				temp = y; //first event with same year
+				diff = 0;
+				l--;
+			}
+			else if(y != null && y.year < year) { //keep skipping at same level
+				if(Math.abs(year - y.year) < diff) {
+					temp = y;
+					diff = Math.abs(year - y.year);
+				}
+				x = y;
+			}
+			else {
+				l--;
+			}
+		}
+		if(temp != null && temp.year==year) {
+			while(temp.year == year) {
+				recent.add(temp);
+				temp = temp.next[0];
+			}
+		}
+		if(temp != null && temp.year < year) {
+			x = head;
+			l = head.next.length - 1;
+			Event z = null;
+			while(l >= 0) {
+				y = x.next[l];
+				if(y != null && y.year == temp.year) {
+					z = y;
+					l--;
+				}
+				else if(y != null && y.year < temp.year) {
+					x = y;
+				}
+				else
+					l--;
+			}
+			while(z.year==temp.year) {
+				recent.add(z);
+				z = z.next[0];
+			}
+		}
+		Event[] answer = new Event[recent.size()];
+		for(int i = 0; i < answer.length; i++) {
+			answer[i] = recent.get(i);
+		}
+		return answer;
+	}
+
+
+	//
+	// Find all Events within the specific range of years (inclusive).
+	//
+	public Event [] findRange(int first, int last)
+	{
+		ArrayList<Event> range = new ArrayList<Event>();
+		int l = head.next.length-1;
+		Event x = head;
+		Event temp = null;
+		int diff = Integer.MAX_VALUE; //keep track of difference between year and first
+		while(l >= 0) {
+			Event y = x.next[l];
+			if(y != null && y.year >= first && y.year <= last) { //find the closest event >=first by updating diff
+				if(Math.abs(y.year - first) <= diff) {
+					temp = y;
+					diff = Math.abs(y.year - first);
+				}
+				l--;
+			}
+			else if(y != null && y.year < first) { //keep skipping at the same level
+				x = y;
+			}
+			else {
+				l--;
+			}
+		}
+		while(temp != null && temp.year <= last) { //add events to arraylist starting at first, until last, at level 0
+			range.add(temp); //should already be in order
+			temp = temp.next[0];
+		}
+		Event[] answer = new Event[range.size()];
+		for(int i = 0; i < answer.length; i++) {
+			answer[i] = range.get(i);
+		}
+		return answer;
+	}
+}
